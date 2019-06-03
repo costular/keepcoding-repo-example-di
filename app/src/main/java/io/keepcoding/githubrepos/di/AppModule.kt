@@ -1,46 +1,36 @@
 package io.keepcoding.githubrepos.di
 
-import android.app.Application
-import android.content.Context
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
-import dagger.Module
-import dagger.Provides
 import io.keepcoding.githubrepos.MainRepository
 import io.keepcoding.githubrepos.MainRepositoryImpl
+import io.keepcoding.githubrepos.MainViewModel
 import io.keepcoding.githubrepos.api.GithubService
+import org.koin.android.viewmodel.dsl.viewModel
+import org.koin.core.qualifier.named
+import org.koin.dsl.module
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import javax.inject.Singleton
 
-@Module
-class AppModule(private val application: Application) {
+val appModule = module {
 
-    @Singleton
-    @Provides
-    fun provideContext(): Context = application.applicationContext
+    single<MainRepository> {
+        MainRepositoryImpl(get())
+    }
 
-    @Singleton
-    @Provides
-    fun provideUrl(): String = "https://api.github.com/"
+    single {
+        get<Retrofit>().create(GithubService::class.java)
+    }
 
-    @Singleton
-    @Provides
-    fun provideRetrofit(url: String): Retrofit =
-        Retrofit
-            .Builder()
-            .baseUrl(url)
-            .addCallAdapterFactory(CoroutineCallAdapterFactory.invoke())
+    single {
+        Retrofit.Builder()
+            .baseUrl(get<String>(qualifier = named("production")))
             .addConverterFactory(GsonConverterFactory.create())
+            .addCallAdapterFactory(CoroutineCallAdapterFactory.invoke())
             .build()
+    }
 
-    @Singleton
-    @Provides
-    fun provideGithubService(retrofit: Retrofit): GithubService =
-        retrofit.create(GithubService::class.java)
-
-    @Singleton
-    @Provides
-    fun provideRepository(githubService: GithubService): MainRepository =
-        MainRepositoryImpl(githubService)
+    viewModel {
+        MainViewModel(get())
+    }
 
 }
